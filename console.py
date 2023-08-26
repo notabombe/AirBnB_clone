@@ -19,16 +19,15 @@ def parse(arg):
     if curly_braces is None:
         if brackets is None:
             return [i.strip(",") for i in split(arg)]
-        else:
-            lexer = split(arg[:brackets.span()[0]])
-            retl = [i.strip(",") for i in lexer]
-            retl.append(brackets.group())
-            return retl
+        lexer = split(arg[:brackets.span()[0]])
+        retl = [i.strip(",") for i in lexer]
+        retl.append(brackets.group())
     else:
         lexer = split(arg[:curly_braces.span()[0]])
         retl = [i.strip(",") for i in lexer]
         retl.append(curly_braces.group())
-        return retl
+
+    return retl
 
 
 class HBNBCommand(cmd.Cmd):
@@ -66,12 +65,12 @@ class HBNBCommand(cmd.Cmd):
         if match is not None:
             argl = [arg[:match.span()[0]], arg[match.span()[1]:]]
             match = re.search(r"\((.*?)\)", argl[1])
-            if match is not None:
-                command = [argl[1][:match.span()[0]], match.group()[1:-1]]
-                if command[0] in argdict.keys():
-                    call = "{} {}".format(argl[0], command[1])
-                    return argdict[command[0]](call)
-        print("*** Unknown syntax: {}".format(arg))
+        if match is not None:
+            command = [argl[1][:match.span()[0]], match.group()[1:-1]]
+            if command[0] in argdict:
+                call = f"{argl[0]} {command[1]}"
+                return argdict[command[0]](call)
+        print(f"*** Unknown syntax: {arg}")
         return False
 
     def do_quit(self, arg):
@@ -108,10 +107,10 @@ class HBNBCommand(cmd.Cmd):
             print("** class doesn't exist **")
         elif len(argl) == 1:
             print("** instance id missing **")
-        elif "{}.{}".format(argl[0], argl[1]) not in objdict:
+        elif f"{argl[0]}.{argl[1]}" not in objdict:
             print("** no instance found **")
         else:
-            print(objdict["{}.{}".format(argl[0], argl[1])])
+            print(objdict[f"{argl[0]}.{argl[1]}"])
 
     def do_destroy(self, arg):
         """Usage: destroy <class> <id> or <class>.destroy(<id>)
@@ -124,10 +123,10 @@ class HBNBCommand(cmd.Cmd):
             print("** class doesn't exist **")
         elif len(argl) == 1:
             print("** instance id missing **")
-        elif "{}.{}".format(argl[0], argl[1]) not in objdict.keys():
+        elif f"{argl[0]}.{argl[1]}" not in objdict.keys():
             print("** no instance found **")
         else:
-            del objdict["{}.{}".format(argl[0], argl[1])]
+            del objdict[f"{argl[0]}.{argl[1]}"]
             storage.save()
 
     def do_all(self, arg):
@@ -150,10 +149,11 @@ class HBNBCommand(cmd.Cmd):
         """Usage: count <class> or <class>.count()
         Retrieve the number of instances of a given class."""
         argl = parse(arg)
-        count = 0
-        for obj in storage.all().values():
-            if argl[0] == obj.__class__.__name__:
-                count += 1
+        count = sum(
+            1
+            for obj in storage.all().values()
+            if argl[0] == obj.__class__.__name__
+        )
         print(count)
 
     def do_update(self, arg):
@@ -174,7 +174,7 @@ class HBNBCommand(cmd.Cmd):
         if len(argl) == 1:
             print("** instance id missing **")
             return False
-        if "{}.{}".format(argl[0], argl[1]) not in objdict.keys():
+        if f"{argl[0]}.{argl[1]}" not in objdict.keys():
             print("** no instance found **")
             return False
         if len(argl) == 2:
@@ -188,14 +188,14 @@ class HBNBCommand(cmd.Cmd):
                 return False
 
         if len(argl) == 4:
-            obj = objdict["{}.{}".format(argl[0], argl[1])]
+            obj = objdict[f"{argl[0]}.{argl[1]}"]
             if argl[2] in obj.__class__.__dict__.keys():
                 valtype = type(obj.__class__.__dict__[argl[2]])
                 obj.__dict__[argl[2]] = valtype(argl[3])
             else:
                 obj.__dict__[argl[2]] = argl[3]
         elif type(eval(argl[2])) == dict:
-            obj = objdict["{}.{}".format(argl[0], argl[1])]
+            obj = objdict[f"{argl[0]}.{argl[1]}"]
             for k, v in eval(argl[2]).items():
                 if (k in obj.__class__.__dict__.keys() and
                         type(obj.__class__.__dict__[k]) in {str, int, float}):
